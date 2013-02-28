@@ -1,0 +1,15 @@
+Source: glancepush
+Section: unknown
+Priority: extra
+Maintainer: Mattieu Puel <mpuel@in2p3.fr>
+Build-Depends: debhelper (>= 8.0.0)
+Standards-Version: 3.9.3
+Homepage: <insert the upstream URL, if relevant>
+#Vcs-Git: git://git.debian.org/collab-maint/glancepush.git
+#Vcs-Browser: http://git.debian.org/?p=collab-maint/glancepush.git;a=summary
+
+Package: glancepush
+Architecture: all
+Depends: ${misc:Depends}
+Description: <insert up to 60 chars description>
+ <insert long description, indented with spaces>

@@ -30,10 +30,9 @@ prog=glancepush
 source /etc/glancepush/glancepushrc
 
 RETVAL=0
-desc="Pushes updated subscribed images from vmcatcher to glance"
 
 start() {
-        echo -n $"Starting $desc: "
+        echo -n $"Starting $prog: "
 
         sed "s/###mailto###/$mailto/" $cron_template > $cron_target
         chmod 444 $cron_target
@@ -50,7 +49,7 @@ start() {
 }
 
 stop() {
-        echo -n $"Stopping $desc: "
+        echo -n $"Stopping $prog: "
         rm -f $cron_target
         RETVAL=$?
 
