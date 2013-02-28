@@ -1,0 +1,14 @@
+# name of the image
+name=official-SL-6x-${arch}
+
+# additional property comment
+comment="what is this image"
+
+# when the image is finally published, shall it be publicly released
+is_public="no"
+
+# image file format {qcow2|raw|ami|ari|aki|vhd|vmdk|vdi|iso}
+disk_format="qcow2"
+
+# image container format {ami|ari|aki|bare|ovf}
+container_format="bare"

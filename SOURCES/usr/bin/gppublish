@@ -1,0 +1,124 @@
+#! /bin/sh
+############################################################
+#                                                          #
+#                       gppublish                          #
+#                                                          #
+############################################################
+#
+# author:    mpuel@in2p3.fr
+# date:      mardi 4 décembre 2012, 10:47:27 (UTC+0100)
+# copyright: Copyright (c) by IN2P3 computing centre, Villeurbanne (Lyon), France
+#
+# usage:  gppublish [-q] imagelabel
+#
+# purpose:
+#  * upload an image to glance 
+#  * if -q option is provided, the image will be uploaded to a quarantine zone (only admin access)
+#  * if no -q option, the image is not uploaded. The original image is deleted and the quarantined image is renamed.
+#
+# comment:
+#  * update version with build suffix
+
+source /etc/glancepush/glancepushrc
+source /usr/share/glancepush/common.sh
+source $novacreds
+
+[ "$1" = -q ] && { opt_q=0; shift; } || opt_q=1
+
+name=$1
+[ -s $meta/$name ] || { echo "meta <$meta/$name> not found"; exit 1; }
+[ -s $transform/$name ] || { echo "transform script <$transform/$name> not found"; exit 1; }
+
+source $meta/$name
+
+vers_suffix=$(date +%y%m%d)
+released_uuid=$(glance image-list --name $name | awk '/active/{print $2}')
+testing_tenant_id=$(keystone tenant-list | awk '/ '"$testing_tenant"' /{print $2}')    
+
+# publish in the quarantine area
+if [ $opt_q = 0 ]
+    then
+
+    # check image file
+    imagefile=$(vmcatcher_cached_image "$name")
+    [ -s "$imagefile"  ] || { echo "no such file <$imagefile>"; exit 1; }
+
+    if [ -n "$released_uuid" ]
+    then
+        former_version=$(glance image-show $released_uuid | egrep 'Property.*version' | cut -d\| -f3)
+        former_version=${former_version// /}
+        if [ -n "$former_version" ]
+        then
+            version=${former_version%.*}.${vers_suffix}
+        fi
+    fi
+    version=${version:-1.0}
+
+    q_uuid=$(quarantined_id "$name")
+    if [ -n "$q_uuid" ]
+        then
+        _log "an image ${name}.q is already released... delete"
+        glance image-update $q_uuid --is-protected no
+        glance -f image-delete $q_uuid
+    fi
+
+    _log "uploading image <$name> to glance (quarantine), version=$version"
+    uuid=$(
+        $transform/${name} < "$imagefile" | glance image-create \
+        --name ${name}.q \
+        --is-protected ${is_protected:-yes} \
+        --disk-format ${disk_format:-raw} \
+        --is-public ${is_public:-true} \
+        --property comment="$comment" \
+        --property version=$version \
+        --container-format ${container_format:-bare} \
+            | awk '/ id /{print $4}'
+    )
+
+    _debug "write id in runfile"
+    sed -i '/glance_id=/d' "$rundir/$name"
+    echo "glance_id=\"$uuid\"" >> "$rundir/$name"
+
+    _debug "provide access to testing tenant <$testing_tenant>"
+    q_uuid=$(glance image-list --name ${name}.q | awk '/active/{print $2}')
+    glance member-add $q_uuid $testing_tenant_id
+
+# really publish image
+else
+    
+    q_uuid=$(glance image-list --name ${name}.q | awk '/active/{print $2}')
+    [ -z "$q_uuid" ] && { echo "could not find image ${name}.q, abort"; exit 1; }
+
+    if [ -n "$released_uuid" ]
+        then
+        _log "remove previously released image"
+        glance image-update $released_uuid --is-protected no
+        glance -f image-delete $released_uuid
+    fi
+
+    _debug "remove testing tenant auth"
+    glance member-delete $q_uuid $testing_tenant_id
+
+    if [ ${is_public:-yes} != yes ]
+    then
+        for at in $auth_tenants
+        do
+            _debug "release image to desired tenant: <$at>"
+            glance member-add $q_uuid $(tenant_id "$at")
+            
+        done
+    else
+        _debug "release image publicly"
+        glance image-update $q_uuid --is-public yes --is-protected yes
+    fi
+
+    if glance image-update $q_uuid --name $name
+        then
+        _debug "success setting final name <$name>"
+        exit 0
+    else
+        _err "error while rename final image <$name>"
+        exit 1
+    fi
+
+fi

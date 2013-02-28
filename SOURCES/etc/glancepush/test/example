@@ -1,0 +1,9 @@
+#! /bin/bash -xe
+
+source /tmp/lib
+
+check_iosched
+check_no_embedded_swap
+check_uptodate
+check_no_passwords
+check_no_ssh_keys

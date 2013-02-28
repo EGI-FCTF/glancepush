@@ -1,0 +1,46 @@
+.TH glancepushrc 5 "2013/02/28" "glancepush-0.1" 
+.SH NAME
+glancepushrc \- glancepush configuration file
+
+.SH DESCRIPTION
+This manual describes the configuration items of glancepush tool.
+
+.SH CONFIGURATION PARAMETERS
+The configuration file has to be written in shell syntax as it is sourced by tools.
+
+.IP \fBkey\fR
+  Path to the ssh private key that will be used to connect to the VMs. This must match the keypair provided to Openstack for the tenant \fBtesting_tenant\fR.
+  example: key="/etc/glancepush/key"
+
+.IP \fBnovacreds\fR
+  Path of the Openstack credentials used to manage VMs. A proper role has to be attributed to the user in the tenant \fBtesting_tenant\fR.
+  example: novacreds="/etc/glancepush/novarc"
+
+.IP \fBkeypair\fR
+  Name of the keypair provided to Openstack.
+  example: keypair="key"
+
+.IP \fBvmcatcher_cache\fR
+  Directory where vmcatcher cache.index file resides.
+  example: vmcatcher_cache="/vmcatcher/cache"
+
+.IP \fBvmcatcher_conf\fR
+  File containing vmcatcher configuration.
+  example: vmcatcher_conf="/etc/vmcatcherrc"
+
+.IP \fBtesting_tenant\fR
+  Tenant which will launch instances for policy checks.
+  example: testing_tenant="glancepush"
+
+.IP \fBmailto\fR
+  Mail where will be sent cron errors.
+  example: mailto="admin@site.tld"
+
+.IP \fBmdebug\fR
+  Enabled/disable debugging (may be false|true).
+  example: debug="false"
+
+.SH "AUTHOR(S)"
+.na
+.nf
+Mattieu Puel @ CC-IN2P3 FR

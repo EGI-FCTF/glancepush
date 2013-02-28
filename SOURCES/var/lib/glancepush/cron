@@ -1,0 +1,3 @@
+MAILTO=###mailto###
+
+0 0 * * * root /usr/bin/gpupdate > /dev/null

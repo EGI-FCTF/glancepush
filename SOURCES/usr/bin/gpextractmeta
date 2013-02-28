@@ -1,0 +1,82 @@
+#!/usr/bin/python
+############################################################
+#                                                          #
+#                      gpextractmeta                       #
+#                                                          #
+############################################################
+#
+# author:    mpuel@in2p3.fr
+# date:      vendredi 8 fevrier 2013, 15:13:18 (UTC+0100)
+# copyright: Copyright (c) by IN2P3 computing centre, Villeurbanne (Lyon), France
+#
+# usage:  gpextractmeta
+#
+# purpose:
+#  * extract from vmcatcher cache index the images metadata
+
+import os
+import json
+from confparser import *
+
+
+confDir = '/etc/glancepush'
+confFile = confDir + '/glancepushrc'
+vmcMapping = confDir + '/vmcmapping'
+
+try:
+    fp = open(confFile, 'r')
+    fp.close()
+except:
+    print "error reading configuration file <%s>" % confFile
+    
+# read config file
+cachedir = getConfValue( confFile, "vmcatcher_cache")
+
+# fixed configuration
+indexFilePath = cachedir + "/cache.index"
+varrun = "/var/run/glancepush"
+
+
+if os.path.isfile(indexFilePath):
+    fp = open(indexFilePath,'r')
+    lines = fp.read()
+    tmp = json.loads(lines)
+    if type(tmp) is dict:
+        index = tmp
+    fp.close()
+else:
+    index = {}
+
+# load vmc names mapping
+fp = open(vmcMapping,'r')
+lines = fp.read()
+vmcmap = json.loads(lines)
+fp.close()
+
+ids = {}
+for id in index.keys():
+    vmcName = str(index[id]['dc:title'])
+    # skip images not pushed to glance
+    if not vmcmap.has_key(vmcName):
+        continue
+    glanceName = vmcmap[vmcName]
+    ids[glanceName] = {}
+    ids[glanceName]['id'] = id
+
+
+# writes meta data
+for image in ids.keys():
+    
+    # do not overwrite image "glance_id"
+    glance_id = ""
+    confid = getConfValue( varrun + "/" + image, "glance_id")
+    if confid != "confNotFound":
+        glance_id = confid
+
+    try:
+        # write run data
+        f = open(varrun + "/" + image, "w")
+        f.write( 'vmcatcher_id="%s"\nglance_id="%s"\n' % ( ids[image]['id'], glance_id ) )
+        f.close()
+    except:
+        print "error writing meta data"

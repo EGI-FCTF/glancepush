@@ -1,0 +1,41 @@
+#! /bin/bash
+############################################################
+#                                                          #
+#                           lib                            #
+#                                                          #
+############################################################
+#
+# author:    mpuel@in2p3.fr
+# date:      vendredi 1 février 2013, 10:35:53 (UTC+0100)
+# copyright: Copyright (c) by IN2P3 computing centre, Villeurbanne (Lyon), France
+#
+# purpose:
+#  * implements common tests
+#  * will be uploaded to the tested VM to /tmp/lib
+
+update_count_thresh=10
+
+check_iosched()
+{
+    :
+}
+
+check_no_embedded_swap()
+{
+    ! fdisk -l 2>/dev/null | grep -qi swap
+}
+
+check_uptodate()
+{
+    [ $(yum check-update -q | wc -l | awk '{print $1}') -lt $update_count_thresh ]
+}
+
+check_no_passwords()
+{
+    [ -z "$(cut -d: -f2 /etc/shadow | egrep -v '\*|!!')" ]
+}
+
+check_no_ssh_keys()
+{
+    [ $(grep -c '^'ssh /root/.ssh/authorized_keys) -eq 1 ]
+}

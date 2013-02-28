@@ -1,0 +1,23 @@
+.TH gpupdate 1 "2013/02/22" "glancepush-0.1" 
+.SH NAME
+gpupdate \- Pushes updated subscribed images from vmcatcher to glance
+
+.SH SYNOPSOS
+gpupdate
+
+.SH DESCRIPTION
+gpupdate is the highest level command which is in charge of:
+        . checking wether there are some new images to upload to glance (either newly subscribed or updated by their authors)
+        . uploading the new image to a quarantined zone in glance
+        . startup an instance of the image and perform security checks in it
+        . release the image publicly if it passes the tests
+.RE
+
+.SH "AUTHOR(S)"
+.na
+.nf
+Mattieu Puel @ IN2P3-CC
+
+.SH SEE ALSO
+.B gppublish (1), gppolcheck (1), gpextractmeta (1)
+

@@ -1,0 +1,29 @@
+#! /bin/bash
+############################################################
+#                                                          #
+#                        gppolcheck                        #
+#                                                          #
+############################################################
+#
+# author:    mpuel@in2p3.fr
+# date:      vendredi 1 février 2013, 13:53:20 (UTC+0100)
+# copyright: Copyright (c) by IN2P3 computing centre, Villeurbanne (Lyon), France
+#
+# usage:  gppolcheck image
+#
+# purpose:
+#  * instanciate a quarantined image
+#  * apply policy checks
+#  * returns result
+
+source /etc/glancepush/glancepushrc
+source /usr/share/glancepush/common.sh
+source $novacreds
+
+usg="usage: gppolcheck image"
+image=$1
+[ -z "$image" -o "$image" = -h -o "$image" = --help ] && { echo "$usg"; exit 1; }
+[ -s $meta/$image ] || { echo "meta file <$meta/$image> not found"; exit 1; }
+[ -s $test/$image ] || { echo "test script <$test/$image> not found"; exit 1; }
+
+test_policy $image >> $logs/${image}.policy 2>&1 

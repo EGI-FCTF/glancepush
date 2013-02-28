@@ -1,0 +1,23 @@
+# path of the private key that will be used to connect to the VMs
+key="/etc/glancepush/key"
+
+# path of the Openstack credentials used to manage VMs
+novacreds="/etc/glancepush/novarc"
+
+# name of the keypair provided to Openstack
+keypair="key"
+
+# directory where vmcatcher cache.index file resides
+vmcatcher_cache=""
+
+# file containing vmcatcher configuration
+vmcatcher_conf=""
+
+# tenant which will launch instances for policy checks
+testing_tenant=""
+
+# email where to send gpupdate cron errors
+mailto=""
+
+# debug {true|false}
+debug="false"
