@@ -28,31 +28,19 @@ _debug "gpupdate start"
 cd $meta
 
 # check every files
-for image in $(pushlist)
+for image in $(updated)
 do
     _debug "checking updates for image <$image>"
     # checks wether image file changed since last pass
     source $rundir/$image
 
     source "$meta/$image"
-    glance_id=$(glance_id $image)
 
     # checks if a version of the image is already quarantined
-    if [ -n "$(quarantined_id "$image")" ]
+    if [ -n "$(glance_id "${image}.q")" ]
         then
         _err "the image is already quarantined. Something went wrong, please check logs for image <$image>"
         continue
-    fi
-
-    # is image already stored into catalog ?
-    if [ -n "$glance_id" ]
-        then
-        # checks wether image is newer than last upload
-        if ! updated $image
-            then
-            _debug "image <$image> up to date, skipping..."
-            continue
-        fi
     fi
 
     # quarantine publication

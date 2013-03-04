@@ -22,6 +22,7 @@ meta=$etc/meta
 rundir=/var/run/glancepush
 vmcmapping=$etc/vmcmapping
 transform=$etc/transform
+spooldir=/var/spool/glancepush
 
 ssh_opts="-F/dev/null -i $key -oConnectTimeout=20 -ostricthostkeychecking=no -oUserKnownHostsFile=/dev/null -opasswordauthentication=no -obatchmode=yes"
 
@@ -227,80 +228,38 @@ EOF
 }
 
 
-# args: image
-# checks if image has been updated by vmcatcher more recently than the upload date to glance
-updated()
-{
-    image=$1
 
-    tmpf=$(mktemp -p /dev/shm)
-    glance image-show $(glance_id "$image") > $tmpf
-    glance_import_date=$(awk '/ created_at /{print $4}' $tmpf)
-    image_deleted=$(awk '/ deleted /{print $4}' $tmpf)
-    rm -f $tmpf
-
-    if [ "$image_deleted" = True ]
-        then
-        _log "image <$image> has been deleted from glance, reupload"
-        return 0
-    fi
-
-    vmcatcher_import_date=$( 
-        (
-            source $vmcatcher_conf
-            vmcatcher_image -i -u $(vmcatcher_id "$image") | awk -F= '/imagelist.dc:date:imported/{print $2}'
-        )
-    )
-
-    python <<EOF
-from dateutil.parser import *
-import sys
-import pytz
-utc=pytz.UTC
-gd = parse("$glance_import_date")
-vd = parse("$vmcatcher_import_date")
-if vd > utc.localize(gd):
-  sys.exit( 0 )
-else:
-  sys.exit( 1 )
-EOF
-    # beware: implicit return code
-}
-
-
-# args: image
-# returns the vmcatcher id for an image
-vmcatcher_id()
-{
-    image=$1
-
-    sed -n 's/vmcatcher_id=\"\(.*\)\"/\1/p' "$rundir/$image"
-}
-
-
-# args: image
-# returns the glance id for an image
+# returns the uuid of an image
 glance_id()
 {
     image=$1
 
-    sed -n 's/glance_id=\"\(.*\)\"/\1/p' "$rundir/$image"
+    glance image-list --name "$image" | awk '/active/{print $2}'
 }
 
+
+# returns the path to the image
 # args: image
-# returns the path to the cached image
-vmcatcher_cached_image()
+image_path()
 {
     image=$1
 
-    echo $vmcatcher_cache/$(vmcatcher_id "$image")
+    awk -F= '/file=/{print $2}' $rundir/$image
 }
 
 
-# returns the uuid of a quarantined image
-quarantined_id()
+# returns the list of updated images
+updated()
 {
-    image=$1
+    ls --color=none -1 $spooldir
+}
 
-    glance image-list --name ${image}.q | awk '/active/{print $2}'
+
+# returns keystone tenant id
+# args: tenant_name
+tenant_id()
+{
+    tenant=$1
+
+    keystone tenant-list | awk '/ '"$tenant"' /{print $2}'
 }

@@ -9,7 +9,7 @@
 # date:      mardi 4 décembre 2012, 10:47:27 (UTC+0100)
 # copyright: Copyright (c) by IN2P3 computing centre, Villeurbanne (Lyon), France
 #
-# usage:  gppublish [-q] imagelabel
+# usage:  gppublish [-q] image
 #
 # purpose:
 #  * upload an image to glance 
@@ -23,24 +23,26 @@ source /etc/glancepush/glancepushrc
 source /usr/share/glancepush/common.sh
 source $novacreds
 
+usg="usage:  gppublish [-q] {imagename|imagefile}"
 [ "$1" = -q ] && { opt_q=0; shift; } || opt_q=1
 
 name=$1
-[ -s $meta/$name ] || { echo "meta <$meta/$name> not found"; exit 1; }
-[ -s $transform/$name ] || { echo "transform script <$transform/$name> not found"; exit 1; }
+[ -z "$name" -o "$name" = -h -o "$name" = --help ] && { echo "$usg"; exit 1; }
+[ -f $meta/$name -a -s $meta/$name ] || { echo "meta <$meta/$name> not found"; exit 1; }
+[ -f $transform/$name -a -s $transform/$name ] || { echo "transform script <$transform/$name> not found"; exit 1; }
 
 source $meta/$name
 
 vers_suffix=$(date +%y%m%d)
-released_uuid=$(glance image-list --name $name | awk '/active/{print $2}')
-testing_tenant_id=$(keystone tenant-list | awk '/ '"$testing_tenant"' /{print $2}')    
+released_uuid=$(glance_id "$name")
+testing_tenant_id=$(tenant_id "$testing_tenant")    
 
 # publish in the quarantine area
 if [ $opt_q = 0 ]
     then
 
     # check image file
-    imagefile=$(vmcatcher_cached_image "$name")
+    imagefile=$(image_path "$name")
     [ -s "$imagefile"  ] || { echo "no such file <$imagefile>"; exit 1; }
 
     if [ -n "$released_uuid" ]
@@ -54,7 +56,7 @@ if [ $opt_q = 0 ]
     fi
     version=${version:-1.0}
 
-    q_uuid=$(quarantined_id "$name")
+    q_uuid=$(glance_id "${name}.q")
     if [ -n "$q_uuid" ]
         then
         _log "an image ${name}.q is already released... delete"
@@ -74,10 +76,6 @@ if [ $opt_q = 0 ]
         --container-format ${container_format:-bare} \
             | awk '/ id /{print $4}'
     )
-
-    _debug "write id in runfile"
-    sed -i '/glance_id=/d' "$rundir/$name"
-    echo "glance_id=\"$uuid\"" >> "$rundir/$name"
 
     _debug "provide access to testing tenant <$testing_tenant>"
     q_uuid=$(glance image-list --name ${name}.q | awk '/active/{print $2}')

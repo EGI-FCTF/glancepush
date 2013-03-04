@@ -7,7 +7,7 @@ Packager: Mattieu Puel
 License: GPL2
 BuildRoot: %{_builddir}/osimgpublish
 BuildArch: noarch
-Requires: python-novaclient, python-glanceclient, python-confparser, python-dateutil, pytz
+Requires: python-novaclient, python-glanceclient, python-dateutil, pytz
 
 
 
@@ -46,15 +46,14 @@ true
 /usr/bin/gppublish
 /usr/bin/gppolcheck
 /usr/bin/gpupdate
-/usr/bin/gpextractmeta
 /usr/share/glancepush/common.sh
 /usr/share/man/man1/gppublish.1.gz
 /usr/share/man/man1/gppolcheck.1.gz
 /usr/share/man/man1/gpupdate.1.gz
-/usr/share/man/man1/gpextractmeta.1.gz
 /usr/share/man/man5/glancepushrc.5.gz
 /var/log/glancepush
 /var/run/glancepush
+/var/spool/glancepush
 /var/lib/glancepush/cron
 /etc/glancepush/test
 /etc/glancepush/meta

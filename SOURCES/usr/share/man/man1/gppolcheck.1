@@ -1,0 +1,19 @@
+.TH gppolcheck 1 "2013/02/22" "glancepush-0.1" 
+.SH NAME
+gppolcheck \- instanciate a quarantined image and validates policy compliance
+
+.SH SYNOPSOS
+gppolcheck image
+
+.SH DESCRIPTION
+The image named **image.q** will be instanciated. Once booted and ssh access ok, the policy test script (stored in /etc/glancepush/test/image) will be copied into the VM and executed. gppolcheck will return the exit code of the test script.
+.RE
+
+.SH "AUTHOR(S)"
+.na
+.nf
+Mattieu Puel @ IN2P3-CC
+
+.SH SEE ALSO
+.B gppublish (1), gppolcheck (1), gpextractmeta (1), glancepushrc (5)
+
