@@ -21,9 +21,6 @@ source /etc/glancepush/glancepushrc
 source /usr/share/glancepush/common.sh
 source $novacreds
 
-_debug "update metadata from vmcatcher cache"
-gpextractmeta
-
 _debug "gpupdate start"
 cd $meta
 

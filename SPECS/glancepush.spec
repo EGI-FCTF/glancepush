@@ -21,6 +21,10 @@ Automate images testing and publishing into Openstack Glance images catalog.
 rsync --exclude .svn -av %{_sourcedir}/ $RPM_BUILD_ROOT/
 
 
+%pre
+groupadd glancepush
+useradd -g glancepush glancepush
+
 
 %post
 # add the disabled service
@@ -31,6 +35,8 @@ chkconfig glancepush off
 %postun
 # remove the service
 chkconfig --del glancepush
+userdel -r glancepush
+groupdel glancepush
 true
 
 
@@ -51,15 +57,16 @@ true
 /usr/share/man/man1/gppolcheck.1.gz
 /usr/share/man/man1/gpupdate.1.gz
 /usr/share/man/man5/glancepushrc.5.gz
-/var/log/glancepush
-/var/run/glancepush
-/var/spool/glancepush
 /var/lib/glancepush/cron
+/etc/rc.d/init.d/glancepush
+%defattr(0775,glancepush,glancepush)
 /etc/glancepush/test
 /etc/glancepush/meta
 /etc/glancepush/transform
-/etc/rc.d/init.d/glancepush
-%defattr(0644,root,root)
+/var/log/glancepush
+/var/run/glancepush
+/var/spool/glancepush
+%defattr(0644,glancepush,glancepush)
 /etc/glancepush/meta/example
 /etc/glancepush/test/example
 /etc/glancepush/test/lib

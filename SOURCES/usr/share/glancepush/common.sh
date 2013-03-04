@@ -20,7 +20,6 @@ loop_thresh_up=50
 loop_sleep=30
 meta=$etc/meta
 rundir=/var/run/glancepush
-vmcmapping=$etc/vmcmapping
 transform=$etc/transform
 spooldir=/var/spool/glancepush
 
@@ -214,18 +213,6 @@ test_policy()
     return $res
 }
 
-
-pushlist()
-{
-    python <<EOF
-import json
-fp = open("$vmcmapping","r")
-vmcmapping = json.loads(fp.read())
-for i in vmcmapping.keys():
-        print vmcmapping[i]
-EOF
-
-}
 
 
 
