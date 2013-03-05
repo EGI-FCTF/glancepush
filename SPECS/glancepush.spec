@@ -64,7 +64,6 @@ true
 /etc/glancepush/meta
 /etc/glancepush/transform
 /var/log/glancepush
-/var/run/glancepush
 /var/spool/glancepush
 %defattr(0644,glancepush,glancepush)
 /etc/glancepush/meta/example

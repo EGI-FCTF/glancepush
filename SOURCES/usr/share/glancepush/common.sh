@@ -19,7 +19,6 @@ loop_thresh=100
 loop_thresh_up=50
 loop_sleep=30
 meta=$etc/meta
-rundir=/var/run/glancepush
 transform=$etc/transform
 spooldir=/var/spool/glancepush
 
@@ -231,7 +230,7 @@ image_path()
 {
     image=$1
 
-    awk -F= '/file=/{print $2}' $rundir/$image
+    awk -F= '/file=/{print $2}' "$spooldir/$image"
 }
 
 

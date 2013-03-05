@@ -28,11 +28,6 @@ cd $meta
 for image in $(updated)
 do
     _debug "checking updates for image <$image>"
-    # checks wether image file changed since last pass
-    source $rundir/$image
-
-    source "$meta/$image"
-
     # checks if a version of the image is already quarantined
     if [ -n "$(glance_id "${image}.q")" ]
         then
