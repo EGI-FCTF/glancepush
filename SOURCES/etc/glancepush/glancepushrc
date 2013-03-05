@@ -15,3 +15,6 @@ mailto=""
 
 # debug {true|false}
 debug="false"
+
+# cron timings when the service will run
+crondate="0 0 * * *"

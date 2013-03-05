@@ -34,7 +34,7 @@ RETVAL=0
 start() {
         echo -n $"Starting $prog: "
 
-        sed "s/###mailto###/$mailto/" $cron_template > $cron_target
+        sed -e "s/###mailto###/$mailto/" -e "s/###crondate###/$crondate/" $cron_template > $cron_target
         chmod 444 $cron_target
         RETVAL=$?
 
