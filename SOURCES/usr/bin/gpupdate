@@ -59,4 +59,7 @@ do
     else
         _err "an error occured while releasing image <$image>"
     fi
+
+    # remove update flag
+    update_done "$image"
 done

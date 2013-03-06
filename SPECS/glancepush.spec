@@ -22,8 +22,14 @@ rsync --exclude .svn -av %{_sourcedir}/ $RPM_BUILD_ROOT/
 
 
 %pre
-groupadd glancepush
-useradd -g glancepush glancepush
+if ! getent group glancepush &>/dev/null
+    then
+    groupadd glancepush
+fi
+if ! getent passwd glancepush &>/dev/null
+    then
+    useradd -g glancepush glancepush
+fi
 
 
 %post
@@ -33,11 +39,14 @@ chkconfig glancepush off
 
 
 %postun
-# remove the service
-chkconfig --del glancepush
-userdel -r glancepush
-groupdel glancepush
-true
+if [ "$1" = 0 ]
+then
+    # remove the service
+    chkconfig --del glancepush
+    userdel -r glancepush
+    groupdel glancepush
+    true
+fi
 
 
 

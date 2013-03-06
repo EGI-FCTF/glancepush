@@ -66,7 +66,7 @@ exec_script()
     _debug "sending script"
     scp $ssh_opts $script root@${host}:/tmp
     _debug "executing script"
-    ssh $ssh_opts root@${host} "/tmp/$scrname $@ < /dev/null" >> $log 2>&1 
+    ssh $ssh_opts root@${host} "chmod 755 /tmp/$scrname; /tmp/$scrname $@ < /dev/null" >> $log 2>&1 
 }
 
 # args: vmname
@@ -95,7 +95,7 @@ wait_vm_up()
             break
         fi
     done
-    [ $i = $loop_thresh_up ] && { _err "VM failed to ping within $(($loop_thres * $loop_sleep)) seconds"; return 1; }
+    [ $i = $loop_thresh_up ] && { _err "VM failed to ping within $(($loop_thresh * $loop_sleep)) seconds"; return 1; }
 
     while [ $i -lt $loop_thresh_up ]
     do
@@ -114,7 +114,7 @@ wait_vm_up()
         return 0
     done
     
-    _err "VM failed accept ssh connection within $(($loop_thres * $loop_sleep)) seconds"
+    _err "VM failed accept ssh connection within $(($loop_thresh * $loop_sleep)) seconds"
     return 1
 }
 
@@ -248,4 +248,13 @@ tenant_id()
     tenant=$1
 
     keystone tenant-list | awk '/ '"$tenant"' /{print $2}'
+}
+
+
+# once completed, remove the update flag
+update_done()
+{
+    image=$1
+
+    rm -f "$spooldir/$image"
 }

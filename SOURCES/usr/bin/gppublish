@@ -35,7 +35,8 @@ source $meta/$name
 
 vers_suffix=$(date +%y%m%d)
 released_uuid=$(glance_id "$name")
-testing_tenant_id=$(tenant_id "$testing_tenant")    
+testing_tenant_id=$(tenant_id "$testing_tenant")
+[ -z "$testing_tenant_id" ] && { _err "the configured Openstack user seems not to have the apropriate roles defined in keystone: unable to check testing tenant id"; exit 1; }
 
 # publish in the quarantine area
 if [ $opt_q = 0 ]
