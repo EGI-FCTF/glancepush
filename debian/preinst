@@ -1,0 +1,10 @@
+#! /bin/sh
+
+if ! getent group glancepush &>/dev/null
+    then
+    groupadd glancepush
+fi
+if ! getent passwd glancepush &>/dev/null
+    then
+    useradd -g glancepush glancepush
+fi
