@@ -80,7 +80,7 @@ if [ $opt_q = 0 ]
 
     _debug "provide access to testing tenant <$testing_tenant>"
     q_uuid=$(glance image-list --name ${name}.q | awk '/active/{print $2}')
-    glance member-add $q_uuid $testing_tenant_id
+    glance member-create $q_uuid $testing_tenant_id
 
 # really publish image
 else
@@ -103,7 +103,7 @@ else
         for at in $auth_tenants
         do
             _debug "release image to desired tenant: <$at>"
-            glance member-add $q_uuid $(tenant_id "$at")
+            glance member-create $q_uuid $(tenant_id "$at")
             
         done
     else
