@@ -67,7 +67,7 @@ fi
 /usr/share/man/man1/gpupdate.1.gz
 /usr/share/man/man5/glancepushrc.5.gz
 /var/lib/glancepush/cron
-/etc/rc.d/init.d/glancepush
+/etc/init.d/glancepush
 %defattr(0775,glancepush,glancepush)
 /etc/glancepush/test
 /etc/glancepush/meta
