@@ -169,15 +169,24 @@ test_policy()
     _debug "starting policy checks for VM <$name>"
 
     _debug "checking one and only one image available"
-    [ "$(glance_id "$name" | wc -l)" = 1 ] || { _err "Image named <$name> is either stored zero or multiple times"; return 1; }
+    [ "$(glance_id "${name}.q" | wc -l)" = 1 ] || { _err "Image named <$name> is either stored zero or multiple times"; return 1; }
 
     _debug "booting quarantined VM: <nova boot --flavor $flavor --key-name $keypair --image ${name}.q $servername>"
+    # latest ubuntu uec images disable the root account through cloud-init, avoid it
+    cloudconfig=$(mktemp -p /dev/shm)
+    cat > $cloudconfig <<EOF
+#cloud-config
+disable_root: false
+EOF
     nova boot \
         --flavor $flavor \
         --key-name $keypair \
         --image ${name}.q \
+        --user-data $cloudconfig \
         $servername
-    [ $? != 0 ] && { _err "error instanciating VM"; return 1; }
+    ret=$?
+    rm -f $cloudconfig
+    [ $ret != 0 ] && { _err "error instanciating VM"; return 1; }
 
     wait_vm_active $servername
     if [ $? = 0 ]

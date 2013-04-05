@@ -29,7 +29,6 @@ usg="usage:  gppublish [-q] {imagename|imagefile}"
 name=$1
 [ -z "$name" -o "$name" = -h -o "$name" = --help ] && { echo "$usg"; exit 1; }
 [ -f $meta/$name -a -s $meta/$name ] || { echo "meta <$meta/$name> not found"; exit 1; }
-[ -f $transform/$name -a -s $transform/$name ] || { echo "transform script <$transform/$name> not found"; exit 1; }
 
 source $meta/$name
 
@@ -67,9 +66,18 @@ if [ $opt_q = 0 ]
 
     _log "uploading image <$name> to glance (quarantine), version=$version"
     uuid=$(
-        $transform/${name} < "$imagefile" | glance image-create \
+        (
+            if [ -s $transform/$name ]
+            then
+                _debug "use found transform script"
+                $transform/${name} < "$imagefile"
+            else
+                _debug "no transform script found"
+                cat "$imagefile"
+            fi
+        ) | glance image-create \
         --name ${name}.q \
-        --is-protected ${is_protected:-no} \
+        --is-protected no \
         --disk-format ${disk_format:-raw} \
         --is-public ${is_public:-true} \
         --property comment="$comment" \
@@ -111,7 +119,7 @@ else
         glance image-update $q_uuid --is-public yes
     fi
 
-    if glance image-update $q_uuid --name $name --is-protected yes
+    if glance image-update $q_uuid --name $name --is-protected ${is_protected:-yes}
         then
         _debug "success setting final name <$name>"
         exit 0
