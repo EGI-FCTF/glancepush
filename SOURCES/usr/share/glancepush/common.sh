@@ -167,6 +167,10 @@ test_policy()
     flavor=${flavor:-m1.tiny}
     
     _debug "starting policy checks for VM <$name>"
+
+    _debug "checking one and only one image available"
+    [ "$(glance_id "$name" | wc -l)" = 1 ] || { _err "Image named <$name> is either stored zero or multiple times"; return 1; }
+
     _debug "booting quarantined VM: <nova boot --flavor $flavor --key-name $keypair --image ${name}.q $servername>"
     nova boot \
         --flavor $flavor \
@@ -220,7 +224,7 @@ glance_id()
 {
     image=$1
 
-    glance image-list --name "$image" | awk '/active/{print $2}'
+    glance image-list --name "$image" | awk '/active|queued/{print $2}'
 }
 
 
