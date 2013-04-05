@@ -44,7 +44,7 @@ if [ $opt_q = 0 ]
 
     # check image file
     imagefile=$(image_path "$name")
-    [ -s "$imagefile"  ] || { echo "no such file <$imagefile>"; exit 1; }
+    [ -f "$imagefile"  ] || { echo "no such file <$imagefile>"; exit 1; }
 
     if [ -n "$released_uuid" ]
     then
@@ -69,7 +69,7 @@ if [ $opt_q = 0 ]
     uuid=$(
         $transform/${name} < "$imagefile" | glance image-create \
         --name ${name}.q \
-        --is-protected ${is_protected:-yes} \
+        --is-protected ${is_protected:-no} \
         --disk-format ${disk_format:-raw} \
         --is-public ${is_public:-true} \
         --property comment="$comment" \
@@ -108,10 +108,10 @@ else
         done
     else
         _debug "release image publicly"
-        glance image-update $q_uuid --is-public yes --is-protected yes
+        glance image-update $q_uuid --is-public yes
     fi
 
-    if glance image-update $q_uuid --name $name
+    if glance image-update $q_uuid --name $name --is-protected yes
         then
         _debug "success setting final name <$name>"
         exit 0
