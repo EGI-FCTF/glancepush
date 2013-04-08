@@ -1,3 +1,3 @@
 MAILTO=###mailto###
 
-###crondate### root /usr/bin/gpupdate > /dev/null
+###crondate### glancepush /usr/bin/gpupdate > /dev/null

@@ -17,9 +17,16 @@
 #    - apply policy checks 
 #    - publish image if tests succeed
 
-source /etc/glancepush/glancepushrc
 source /usr/share/glancepush/common.sh
+source /etc/glancepush/glancepushrc
 source $novacreds
+
+if [ $(pgrep -o gpupdate) != $$ ]
+    then
+    _err "another gpupdate process is running, abort"
+    exit 1
+fi
+
 
 _debug "gpupdate start"
 cd $meta

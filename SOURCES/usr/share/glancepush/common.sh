@@ -36,7 +36,7 @@ _debug()
 
 _err()
 {
-    _log "$*" 1>&2
+    _log "error: $*" 1>&2
 }
 
 
@@ -233,7 +233,7 @@ glance_id()
 {
     image=$1
 
-    glance image-list --name "$image" | awk '/active|queued/{print $2}'
+    glance image-list --name "$image" | awk '/active|queued|saving|deleted|pending_delete|killed/{print $2}'
 }
 
 
@@ -270,4 +270,18 @@ update_done()
     image=$1
 
     rm -f "$spooldir/$image"
+}
+
+# remove all images corresponding to given name
+purge_image()
+{
+    image=$1
+
+    _debug "purging image <$image>"
+    for id in $(glance_id "$image")
+    do
+        _log "deleting image <$image> with id <$id>"
+        glance image-update $id --is-protected False
+        glance -f image-delete $id
+    done
 }
