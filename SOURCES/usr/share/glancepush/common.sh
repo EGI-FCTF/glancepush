@@ -26,12 +26,12 @@ ssh_opts="-F/dev/null -i $key -oConnectTimeout=20 -ostricthostkeychecking=no -oU
 
 _log()
 {
-    logger -s -t glancepush -p user.notice "$*"
+    logger -s -t glancepush -p user.notice "$*" 2>&1
 }
 
 _debug()
 {
-    [ "$debug" = true ] && logger -s -t glancepush -p user.debug "$*"
+    [ "$debug" = true ] && logger -s -t glancepush -p user.debug "$*" 2>&1
 }
 
 _err()
@@ -89,7 +89,7 @@ wait_vm_up()
         let i++
         if ! ping_ok $vmname
             then
-            _debug "awaiting $vmname to ping... sleep $loop_sleep"
+            _debug "awaiting $vmname to ping... sleep $loop_sleep [$i/$loop_thresh_up]"
             sleep $loop_sleep
         else
             break
@@ -104,7 +104,7 @@ wait_vm_up()
         _debug "attempting connection <ssh $ssh_opts root@${vmname}>"
         if ! ssh $ssh_opts root@${vmname} /bin/true 2> /dev/null
             then
-            _debug "no ssh access yet, sleep $loop_sleep"
+            _debug "no ssh access yet, sleep $loop_sleep [$i/$loop_thresh_up]"
             sleep $loop_sleep
             continue
         fi
@@ -143,8 +143,43 @@ wait_vm_active()
 get_vm_ip()
 {
     vmname=$1
+    network=$2
 
-    nova show $vmname | grep network | cut -d\| -f3 | awk '{print $1}'
+    desired_pref=${network#*/}
+
+    ips=$(nova show $vmname | awk -F\| '/network/{print $3}' | sed 's/,//g')
+
+    # only one ip allocated
+    if [ -z "$network" ]
+        then
+        # indeed, echo
+        if [ $(echo $ips | wc -w) = 1 ]
+        then
+            echo $ips
+            return 0
+        else
+            _err "multiple ips attached to the VM and no network specified"
+            return 1
+        fi
+    fi
+
+    for ip in $ips
+    do
+        _debug "found ip for vm $vmname: $ip"
+        net=$(ipcalc ${ip}/${desired_pref} -n)
+        net=${net#*=}
+        prefix=$(ipcalc ${ip}/${desired_pref} -p)
+        prefix=${prefix#*=}
+
+        if [ "$network" = "${net}/$prefix" ]
+            then
+            echo $ip
+            return 0
+        fi
+    done
+
+    _err "no attached ip found for vm $vmname in network $network"
+    return 1
 }
 
 
@@ -153,6 +188,37 @@ get_vm_ip()
 tenant_id()
 {
     keystone tenant-list | sed -n 's/^|\ \+\([^\ ]\+\)\ \+|\ \+'"$1"'\ .*/\1/p'
+}
+
+
+# add a floating ip to an instance
+add_floating_ip()
+{
+    server=$1
+
+    # wait VM gets its fixed IP
+    i=0
+    while ! get_vm_ip "$server" && [ $i -lt 20 ]
+    do
+        sleep 3
+        let i++
+    done
+    [ $i = 20 ] && { _err "could not associate a floating ip to server <$server>, no fixed ip found"; return 1; }
+
+    ip=$(nova floating-ip-create | awk '/None/{print $2}')
+    _debug "created new floating ip <$ip>"
+    _debug "attach it to the server <$server>"
+    nova add-floating-ip "$server" "$ip"
+
+    echo $ip
+}
+
+delete_floating_ip()
+{
+    ip=$1
+
+    _debug "releasing public floating ip <$ip>"
+    nova floating-ip-delete "$ip"
 }
 
 
@@ -188,10 +254,15 @@ EOF
     rm -f $cloudconfig
     [ $ret != 0 ] && { _err "error instanciating VM"; return 1; }
 
+    if [ "$need_floating_ip" = yes ]
+        then
+        floating_ip=$(add_floating_ip "$servername")
+    fi
+
     wait_vm_active $servername
     if [ $? = 0 ]
     then
-        ip=$(get_vm_ip $servername)
+        ip=$(get_vm_ip "$servername" "$private_network")
         _debug "get VM ip: <$ip>"
 
         _debug "wait for connectivity"
@@ -214,6 +285,7 @@ EOF
 
     _debug "shutdown VM"
     nova delete $servername
+    [ -n "$floating_ip" ] && delete_floating_ip "$floating_ip"
 
     # returns result
     if [ $res -eq 0 ]
