@@ -19,7 +19,6 @@
 
 source /usr/share/glancepush/common.sh
 source /etc/glancepush/glancepushrc
-source $novacreds
 
 if [ "$(pgrep -o gpupdate)" != $$ ]
     then
@@ -34,39 +33,48 @@ cd $meta
 # check every files
 for image in $(updated)
 do
-    _debug "checking updates for image <$image>"
-    # checks if a version of the image is already quarantined
-    if [ -n "$(glance_id "${image}.q")" ]
+    
+    source $meta/$image
+    update_errs=0
+    for cloud in $target_clouds
+    do        
+        source $clouds/${cloud}.creds
+        source $clouds/$cloud
+        key=$clouds/${cloud}.key
+        
+        # quarantine publication
+        gppublish -q "$image" "$cloud"
+        if [ $? -ne 0 ]
         then
-        _err "the image is already quarantined. Something went wrong, please check logs for image <$image>"
-        continue
-    fi
+            _err "error while publishing image <$image> to quarantine zone of cloud <$cloud>"
+            let update_errs++
+            continue
+        fi
 
-    # quarantine publication
-    gppublish -q "$image"
-    if [ $? -ne 0 ]
+        # policy validation
+        if gppolcheck "$image" "$cloud"
         then
-        _err "error while publishing image <$image> to quarantine zone"
-        continue
-    fi
+            _log "policy validation passed for image <$image> in cloud <$cloud>"
+        else
+            _err "image <$image> failed policy validation in cloud <$cloud>"
+            let update_errs++
+            continue
+        fi
 
-    # policy validation
-    if gppolcheck "$image"
+        # publication
+        if gppublish "$image" "$cloud"
         then
-        _log "policy validation passed for image <$image>"
-    else
-        _err "image <$image> failed policy validation"
-        continue
-    fi
+            _log "image <$image> successfully released in cloud <$cloud>"
+        else
+            _err "an error occured while releasing image <$image> in cloud <$cloud>"
+            let update_errs++
+        fi
 
-    # publication
-    if gppublish "$image"
-        then
-        _log "image <$image> successfully released"
-    else
-        _err "an error occured while releasing image <$image>"
-    fi
+    done
 
     # remove update flag
-    update_done "$image"
+    if [ $update_errs = 0 ]
+        then
+        update_done "$image"
+    fi
 done

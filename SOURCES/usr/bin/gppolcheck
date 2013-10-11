@@ -9,7 +9,7 @@
 # date:      vendredi 1 février 2013, 13:53:20 (UTC+0100)
 # copyright: Copyright (c) by IN2P3 computing centre, Villeurbanne (Lyon), France
 #
-# usage:  gppolcheck image
+# usage:  gppolcheck image cloud
 #
 # purpose:
 #  * instanciate a quarantined image
@@ -18,12 +18,20 @@
 
 source /etc/glancepush/glancepushrc
 source /usr/share/glancepush/common.sh
-source $novacreds
 
-usg="usage: gppolcheck image"
+usg="usage: gppolcheck image cloud"
 image=$1
-[ -z "$image" -o "$image" = -h -o "$image" = --help ] && { echo "$usg"; exit 1; }
+cloud=$2
+[ -z "$image" -o -z "$cloud" -o "$image" = -h -o "$image" = --help ] && { echo "$usg"; exit 1; }
 [ -s $meta/$image ] || { echo "meta file <$meta/$image> not found"; exit 1; }
 [ -s $test/$image ] || { echo "test script <$test/$image> not found"; exit 1; }
+[ -s $clouds/$cloud ] || { echo "cloud description file <$clouds/$cloud> not found"; exit 1; }
+[ -s $clouds/${cloud}.creds ] || { echo "cloud creds file <$clouds/${cloud}.creds> not found"; exit 1; }
+[ -s $clouds/${cloud}.key ] || { echo "cloud private key <$clouds/${cloud}.key> not found"; exit 1; }
 
-test_policy $image >> $logs/${image}.policy 2>&1 
+source $meta/$image
+
+source $clouds/${cloud}.creds
+source $clouds/$cloud
+key=$clouds/${cloud}.key
+test_policy "$image" "$cloud" >> $logs/${image}.${cloud}.policy 2>&1 

@@ -14,6 +14,7 @@
 
 etc=/etc/glancepush
 test=$etc/test
+clouds=$etc/clouds
 logs=/var/log/glancepush
 loop_thresh=100
 loop_thresh_up=50
@@ -22,16 +23,16 @@ meta=$etc/meta
 transform=$etc/transform
 spooldir=/var/spool/glancepush
 
-ssh_opts="-F/dev/null -i $key -oConnectTimeout=20 -ostricthostkeychecking=no -oUserKnownHostsFile=/dev/null -opasswordauthentication=no -obatchmode=yes"
+ssh_opts="-F/dev/null -oConnectTimeout=20 -ostricthostkeychecking=no -oUserKnownHostsFile=/dev/null -opasswordauthentication=no -obatchmode=yes"
 
 _log()
 {
-    logger -s -t glancepush -p user.notice "$*" 2>&1
+    logger -s -t glancepush -p user.notice "$*" &> /dev/null
 }
 
 _debug()
 {
-    [ "$debug" = true ] && logger -s -t glancepush -p user.debug "$*" 2>&1
+    [ "$debug" = true ] && logger -s -t glancepush -p user.notice "$*" &> /dev/null
 }
 
 _err()
@@ -44,12 +45,12 @@ _err()
 # args: source host dest
 push_file()
 {
-    source=$1
-    host=$2
-    dest=$3
+    typeset source=$1
+    typeset host=$2
+    typeset dest=$3
     
     _debug "sending file"
-    scp $ssh_opts $source root@${host}:$dest
+    scp $ssh_opts -i $key $source root@${host}:$dest
 }
 
 
@@ -57,16 +58,16 @@ push_file()
 # args: script host log [args...]
 exec_script()
 {
-    script=$1
-    host=$2
-    log=$3
+    typeset script=$1
+    typeset host=$2
+    typeset log=$3
     shift; shift; shift;
     scrname=$(basename $script)
     
     _debug "sending script"
-    scp $ssh_opts $script root@${host}:/tmp
+    scp $ssh_opts -i $key $script root@${host}:/tmp
     _debug "executing script"
-    ssh $ssh_opts root@${host} "chmod 755 /tmp/$scrname; /tmp/$scrname $@ < /dev/null" >> $log 2>&1 
+    ssh $ssh_opts -i $key root@${host} "chmod 755 /tmp/$scrname; /tmp/$scrname $@ < /dev/null" >> $log 2>&1 
 }
 
 # args: vmname
@@ -81,7 +82,7 @@ ping_ok()
 # args: vmname
 wait_vm_up()
 {
-    vmname=$1
+    typeset vmname=$1
 
     let i=0
     while [ $i -lt $loop_thresh_up ]
@@ -101,8 +102,8 @@ wait_vm_up()
     do
         let i++
         # wait for ssh to accept connections
-        _debug "attempting connection <ssh $ssh_opts root@${vmname}>"
-        if ! ssh $ssh_opts root@${vmname} /bin/true 2> /dev/null
+        _debug "attempting connection <ssh $ssh_opts -i $key root@${vmname}>"
+        if ! ssh $ssh_opts -i $key root@${vmname} /bin/true 2> /dev/null
             then
             _debug "no ssh access yet, sleep $loop_sleep [$i/$loop_thresh_up]"
             sleep $loop_sleep
@@ -122,7 +123,7 @@ wait_vm_up()
 # waits that the openstack status of the VM is "active"
 wait_vm_active()
 {
-    vmname=$1
+    typeset vmname=$1
 
     let i=0
     status=
@@ -142,12 +143,12 @@ wait_vm_active()
 # returns VM's first IP address
 get_vm_ip()
 {
-    vmname=$1
-    network=$2
+    typeset vmname=$1
+    typeset network=$2
 
     desired_pref=${network#*/}
 
-    ips=$(nova show $vmname | awk -F\| '/network/{print $3}' | sed 's/,//g')
+    typeset ips=$(nova show $vmname | awk -F\| '/network/{print $3}' | tr ',' ' ' | xargs)
 
     # only one ip allocated
     if [ -z "$network" ]
@@ -158,7 +159,7 @@ get_vm_ip()
             echo $ips
             return 0
         else
-            _err "multiple ips attached to the VM and no network specified"
+            _err "multiple ips ($ips) attached to the VM and no network specified"
             return 1
         fi
     fi
@@ -194,30 +195,58 @@ tenant_id()
 # add a floating ip to an instance
 add_floating_ip()
 {
-    server=$1
+    typeset server=$1
 
     # wait VM gets its fixed IP
-    i=0
-    while ! get_vm_ip "$server" && [ $i -lt 20 ]
+    typeset i=0
+    while ! get_vm_ip "$server" > /dev/null && [ $i -lt 20 ]
     do
         sleep 3
         let i++
     done
     [ $i = 20 ] && { _err "could not associate a floating ip to server <$server>, no fixed ip found"; return 1; }
 
-    ip=$(nova floating-ip-create | awk '/None/{print $2}')
-    _debug "created new floating ip <$ip>"
-    _debug "attach it to the server <$server>"
-    nova add-floating-ip "$server" "$ip"
+    export ip=$(nova floating-ip-create | awk '/None/{print $2}')
+    _log "created new floating ip <$ip>, attach it to the server <$server>"
 
-    echo $ip
+    for ((i=0;i<10;i++))
+    do
+        _debug "awaiting floating IP <$ip> available..."
+        nova floating-ip-list | egrep -q " $ip .* None .* None " && break
+        sleep 3
+    done
+    [ $i = 10 ] && { _log "floating ip <$ip> could not be attached"; return 1; }
+
+    tmpf=$(mktemp -p /dev/shm)
+    if nova add-floating-ip "$server" "$ip" &> $tmpf
+        then
+        rm -f $tmpf
+        echo $ip
+    else        
+        _err "add-floating-ip error <$(cat $tmpf)>"
+        return 1
+    fi
+}
+
+check_outbound_connectivity()
+{
+    typeset ip=$1
+
+    ssh $ssh_opts -i $key root@$ip <<'EOF'
+    for (( i=0; i<60; i++ ))
+    do
+        ping -c 1 8.8.8.8 -W1 &> /dev/null && exit 0
+        outok=\$?
+    done
+    exit 1
+EOF
 }
 
 delete_floating_ip()
 {
-    ip=$1
+    typeset ip=$1
 
-    _debug "releasing public floating ip <$ip>"
+    _log "releasing public floating ip <$ip>"
     nova floating-ip-delete "$ip"
 }
 
@@ -226,13 +255,14 @@ delete_floating_ip()
 # requires a valid openstack account
 test_policy()
 {
-    name=$1
+    typeset name=$1
+    typeset cloud=$2
 
     source $meta/$name
     servername=policytest.$RANDOM
     flavor=${flavor:-m1.tiny}
     
-    _debug "starting policy checks for VM <$name>"
+    _debug "starting policy checks for VM <$name> on cloud <$cloud>"
 
     _debug "checking one and only one image available"
     [ "$(glance_id "${name}.q" | wc -l)" = 1 ] || { _err "Image named <$name> is either stored zero or multiple times"; return 1; }
@@ -254,33 +284,39 @@ EOF
     rm -f $cloudconfig
     [ $ret != 0 ] && { _err "error instanciating VM"; return 1; }
 
-    if [ "$need_floating_ip" = yes ]
-        then
-        floating_ip=$(add_floating_ip "$servername")
-    fi
-
-    wait_vm_active $servername
-    if [ $? = 0 ]
+    if ! wait_vm_active $servername
     then
+        _err "error instanciating VM: status not active"; 
+        res=1
+    else
         ip=$(get_vm_ip "$servername" "$private_network")
         _debug "get VM ip: <$ip>"
-
+   
         _debug "wait for connectivity"
-        wait_vm_up $ip   
-        if [ $? = 0 ]
+        if wait_vm_up $ip
         then
+
+            if [ "$need_floating_ip" = yes ]
+            then
+                floating_ip=$(add_floating_ip "$servername")
+                _log "ip <$floating_ip> attached to the server <$servername>, check outbound connectivity..."
+                if check_outbound_connectivity $ip
+                then
+                    _log "outbound connectivity ok"
+                else
+                    _err "no outbound connectivity"
+                fi
+            fi
+
             _debug "scp the policy test script, execute it and fetch the log"
             push_file $test/lib $ip /tmp
-            exec_script $test/$name $ip $logs/${name}.policy
+            exec_script $test/$name $ip $logs/${name}.${cloud}.policy
             res=$?
         else
             _err "no connectivity to VM <$servername/$ip>"
             res=1
         fi
-    
-    else
-        _err "error instanciating VM: status not active"; 
-        res=1
+        
     fi
 
     _debug "shutdown VM"
@@ -303,7 +339,7 @@ EOF
 # returns the uuid of an image
 glance_id()
 {
-    image=$1
+    typeset image=$1
 
     glance image-list --name "$image" | awk '/active|queued|saving|deleted|pending_delete|killed/{print $2}'
 }
@@ -313,7 +349,7 @@ glance_id()
 # args: image
 image_path()
 {
-    image=$1
+    typeset image=$1
 
     awk -F= '/file=/{print $2}' "$spooldir/$image"
 }
@@ -330,7 +366,7 @@ updated()
 # args: tenant_name
 tenant_id()
 {
-    tenant=$1
+    typeset tenant=$1
 
     keystone tenant-list | awk '/ '"$tenant"' /{print $2}'
 }
@@ -339,7 +375,7 @@ tenant_id()
 # once completed, remove the update flag
 update_done()
 {
-    image=$1
+    typeset image=$1
 
     rm -f "$spooldir/$image"
 }
@@ -347,7 +383,7 @@ update_done()
 # remove all images corresponding to given name
 purge_image()
 {
-    image=$1
+    typeset image=$1
 
     _debug "purging image <$image>"
     for id in $(glance_id "$image")

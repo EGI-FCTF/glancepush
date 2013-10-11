@@ -1,6 +1,6 @@
 Summary: Automate images testing and publishing into Openstack Glance images catalog
 Name: glancepush
-Version: 0.1
+Version: 0.2
 Release: 1
 Group: Applications/System
 Packager: Mattieu Puel
@@ -84,5 +84,7 @@ fi
 
 
 %changelog
+* Thu Jul 11 2013 Mattieu Puel 0.2-1
+- handling of multiple clouds
 * Fri Feb 01 2013 Mattieu Puel 0.1-1
 - first release

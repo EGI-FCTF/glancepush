@@ -12,3 +12,9 @@ disk_format="qcow2"
 
 # image container format {ami|ari|aki|bare|ovf}
 container_format="bare"
+
+# testing tenant
+testing_tenant="xxx"
+
+# keypair name
+keypair="my_key_pair"

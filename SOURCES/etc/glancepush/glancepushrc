@@ -1,15 +1,3 @@
-# path of the private key that will be used to connect to the VMs
-key="/etc/glancepush/key"
-
-# path of the Openstack credentials used to manage VMs
-novacreds="/etc/glancepush/novarc"
-
-# name of the keypair provided to Openstack
-keypair="key"
-
-# tenant which will launch instances for policy checks
-testing_tenant=""
-
 # email where to send gpupdate cron errors
 mailto=""
 
