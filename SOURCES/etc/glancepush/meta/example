@@ -2,7 +2,10 @@
 name=official-SL-6x-${arch}
 
 # additional property comment
-comment="what is this image"
+declare -A properties=(
+    [comment]="what is this image"
+    [my_defined_prop]="my value"
+)
 
 # when the image is finally published, shall it be publicly released
 is_public="no"

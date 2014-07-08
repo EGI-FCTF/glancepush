@@ -61,6 +61,17 @@ then
     
     _debug "remove existing queued images <${name}.q>"
     purge_image "${name}.q"
+
+    # check if there is an array for the properties
+    if [ ${#properties[*]} -gt 0 ]
+        then
+        props=""
+        for prop in ${!properties[*]}
+        do
+            props="$props --property $prop='${properties[$prop]}'"
+        done
+        _debug "setting properties: $props"
+    fi
     
     _log "uploading image <$name> to glance (quarantine) on cloud <$cloud>, version=$version"
     uuid=$(
@@ -73,12 +84,13 @@ then
                 _debug "no transform script found"
                 cat "$imagefile"
             fi
-        ) | glance image-create \
+        ) | eval glance image-create \
             --name ${name}.q \
             --is-protected False \
             --disk-format ${disk_format:-raw} \
             --is-public ${is_public:-true} \
-            --property comment="$comment" \
+            --min-disk ${min_disk:-10} \
+            $props \
             --property version=$version \
             --container-format ${container_format:-bare} \
             | awk '/ id /{print $4}'
