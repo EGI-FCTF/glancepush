@@ -68,7 +68,9 @@ then
         props=""
         for prop in ${!properties[*]}
         do
-            props="$props --property $prop='${properties[$prop]}'"
+            propv="${properties[$prop]}"
+            [[ "$propv" =~ "=" ]] || propv="$prop=$propv"
+            props="$props --property '$propv'"
         done
         _debug "setting properties: $props"
     fi
