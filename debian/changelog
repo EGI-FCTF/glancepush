@@ -1,5 +1,5 @@
-glancepush (0.1) unstable; urgency=low
+glancepush (0.3) unstable; urgency=low
 
-  * Initial Release.
+  * Various fixes and possibility to serve iamge delete.
 
- -- Mattieu Puel <mpuel@in2p3.fr>  Fri, 15 Mar 2013 13:37:27 +0100
+ -- Mattieu Puel <mpuel@in2p3.fr>  Mon, Jul 21 14:46:20 +0100
