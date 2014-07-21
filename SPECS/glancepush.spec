@@ -61,6 +61,7 @@ fi
 /usr/bin/gppublish
 /usr/bin/gppolcheck
 /usr/bin/gpupdate
+/usr/bin/gpdelete
 /usr/share/glancepush/common.sh
 /usr/share/man/man1/gppublish.1.gz
 /usr/share/man/man1/gppolcheck.1.gz
