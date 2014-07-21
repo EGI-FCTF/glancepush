@@ -1,0 +1,42 @@
+#! /bin/bash
+############################################################
+#                                                          #
+#                       gpdelete                           #
+#                                                          #
+############################################################
+#
+# author:    mpuel@in2p3.fr
+# date:      mardi 4 dÃ©cembre 2012, 10:47:27 (UTC+0100)
+# copyright: Copyright (c) by IN2P3 computing centre, Villeurbanne (Lyon), France
+#
+# usage:  gpdelete [-q] image cloud
+#
+# purpose:
+#  * remove and image from glance
+#
+# comment:
+
+source /etc/glancepush/glancepushrc
+source /usr/share/glancepush/common.sh
+
+usg="usage:  gpdelete {imagename|imagefile} cloud"
+
+name=$1
+cloud=$2
+[ -z "$name" -o -z "$cloud" -o "$name" = -h -o "$name" = --help ] && { echo "$usg"; exit 1; }
+[ -f $meta/$name -a -s $meta/$name ] || { echo "meta <$meta/$name> not found"; exit 1; }
+
+source $meta/$name
+
+source $clouds/${cloud}.creds
+source $clouds/$cloud
+
+released_uuid=$(glance_id "$name")
+testing_tenant_id=$(tenant_id "$testing_tenant")
+[ -z "$testing_tenant_id" ] && { _err "the configured Openstack user seems not to have the apropriate roles defined in keystone: unable to check testing tenant id"; exit 1; }
+
+# delete images (quarantined and not)
+_debug "remove existing queued images <${name}.q>"
+purge_image "${name}.q"
+_debug "remove existing image <${name}>"
+purge_image "${name}"
