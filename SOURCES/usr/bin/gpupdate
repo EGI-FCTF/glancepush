@@ -35,6 +35,7 @@ for image in $(updated)
 do
     
     source $meta/$image
+    source $spooldir/$image
     update_errs=0
     for cloud in $target_clouds
     do        
@@ -42,6 +43,18 @@ do
         source $clouds/$cloud
         key=$clouds/${cloud}.key
         
+        # image removal
+        if [ "$file" == "#DELETE#" ]; then
+             gpdelete "$image" "$cloud"
+             if [ $? -ne 0 ]
+             then
+                  _err "error while deleting image <$image> to quarantine zone of cloud <$cloud>"
+                  let update_errs++
+                  continue
+             fi
+             continue
+        fi
+
         # quarantine publication
         gppublish -q "$image" "$cloud"
         if [ $? -ne 0 ]
