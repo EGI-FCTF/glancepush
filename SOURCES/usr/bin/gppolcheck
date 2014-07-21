@@ -33,5 +33,6 @@ source $meta/$image
 
 source $clouds/${cloud}.creds
 source $clouds/$cloud
+[ $test_policy == false ] && exit 0
 key=$clouds/${cloud}.key
 test_policy "$image" "$cloud" >> $logs/${image}.${cloud}.policy 2>&1 
