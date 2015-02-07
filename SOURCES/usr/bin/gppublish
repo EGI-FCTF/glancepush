@@ -22,6 +22,22 @@
 source /etc/glancepush/glancepushrc
 source /usr/share/glancepush/common.sh
 
+get_vo_from_properties () {
+	for prop in ${!properties[*]}; do 
+		[[ "${properties[$prop]}" =~ "VMCATCHER_EVENT_VO" ]] && echo `expr match ${properties[$prop]}  '.*=\(.*\)'`; 
+	done
+
+}
+
+get_tenant_from_vo () {
+if [ "$1" = "undefined" ];
+then
+	python -c "import json,sys; json_data=json.load(open('$voms_map_file')); print ' '.join((str(i['tenant']) for i in json_data.values()))"
+else
+	python -c "import json,sys; json_data=json.load(open('$voms_map_file')); print str(json_data.get('$1').get('tenant'))"
+fi
+}
+
 usg="usage:  gppublish [-q] {imagename|imagefile} cloud"
 [ "$1" = -q ] && { opt_q=0; shift; } || opt_q=1
 
@@ -35,6 +51,7 @@ source $meta/$name
 source $clouds/${cloud}.creds
 source $clouds/$cloud
 
+voms_map_file=${voms_map_file:-/etc/keystone/voms.json}
 vers_suffix=$(date +%y%m%d)
 released_uuid=$(glance_id "$name")
 testing_tenant_id=$(tenant_id "$testing_tenant")
@@ -50,7 +67,7 @@ then
     
     if [ -n "$released_uuid" ]
     then
-        former_version=$(glance image-show $released_uuid | egrep 'Property.*version' | cut -d\| -f3)
+        former_version=$(glance image-show $released_uuid | egrep "Property 'version'" | cut -d\| -f3)
         former_version=${former_version// /}
         if [ -n "$former_version" ]
         then
@@ -90,7 +107,7 @@ then
             --name ${name}.q \
             --is-protected False \
             --disk-format ${disk_format:-raw} \
-            --is-public ${is_public:-true} \
+            --is-public False \
             --min-disk ${min_disk:-10} \
             $props \
             --property version=$version \
@@ -115,10 +132,9 @@ else
         glance -f image-delete $released_uuid
     fi
     
-    if [ ${is_public:-True} != True ]
-    then
-        for at in $auth_tenants
-        do
+    auth_tenants=$(get_tenant_from_vo $(get_vo_from_properties))
+    for at in $auth_tenants
+    do
             _debug "release image to desired tenant: <$at> on cloud <$cloud>"
             t_id="$(tenant_id "$at")"
             if [ -n "$t_id" ]
@@ -128,11 +144,7 @@ else
                 _debug "no such tenant $at in keystone@$cloud"
             fi
             
-        done
-    else
-        _debug "release image publicly on cloud <$cloud>"
-        glance image-update $q_uuid --is-public True <&-
-    fi
+    done
 
     _debug "remove testing tenant auth on cloud <$cloud>"
     glance member-delete $q_uuid $testing_tenant_id
